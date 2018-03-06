@@ -1,0 +1,614 @@
+---
+title: "Capstone Project Breast Cancer Diagnosis"
+author: "Sara Shariatie"
+date: "April 17, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+I am going to see where I save my data. then I will read my dataset in which my variables are separated by ','. I will exclude the id as it does not contribute to my resut.
+my dataset has imbalanced classes (B=357,M=212)
+
+```{r}
+#Getting the dataset path
+getwd() 
+#Getting the data
+WDBC.df <- read.csv(file= "C:/Users/Owner/Downloads/Breast Cancer_Diagnosis.csv",
+header= TRUE, stringsAsFactors = F, na.strings = c("", "NA"), sep = ',')
+#str(WDBC.df)
+WDBC.df <- WDBC.df[-1]
+prop.table(table(WDBC.df[,1]))
+```
+
+I am exploring my dataset through forloop to go through all my values inorder to identify any Na in type of factor and character of my dataset.
+```{r}
+for (i in 1:length(WDBC.df)) {
+  if (is.character(WDBC.df[,i]) | is.factor(WDBC.df[,i]))
+    print(table(WDBC.df[,i],useNA = 'ifany'))
+  else
+    print(summary(WDBC.df[,i]))
+}
+#View(WDBC.df)
+```
+
+The variable diagnosis is our target variable i.e. this variable will determine the results of the diagnosis based on the 10 numeric variables (characteristics) and 3 measures for each of them.
+ it gives the result in the percentage form rounded of to 1 decimal place(digits = 1).
+So we can use the following query to apply the above mentioned fact. However, I aware of this, I did not apply this to my data set to avoid making it more irresistable to error.
+round(prop.table(table(WDBC.df$diagnosis)) * 100, digits = 1)
+```{r}
+#round(prop.table(table(WDBC.df$diagnosis)) * 100, digits = 1)
+```
+--------------------------------Normalizing numeric data-------------------------------
+For fitting the values in specific range, normalization needs to be done. some variables are on very different scales. Forexample, Smoothness means are around 0.1 and areas are around 400, so I need to transform all variables to comparable scales. Once I define my normalize function, I am required to normalize the numeric features in the data set. Instead of normalizing each of the variable individually, I use Lapply:
+
+```{r }
+normalize <- function(x) {
+return ((x - min(x)) / (max(x) - min(x))) }
+WDBC.df_n <- as.data.frame(lapply(WDBC.df[, 2:31], normalize))
+```
+I am going to get the boxplot for my first dataset and normalized one. The changes after applying normalization function to my dataset is manifest
+
+```{r }
+boxplot(WDBC.df[,2:31], las=2, col=rainbow( ncol(WDBC.df)))
+boxplot(WDBC.df_n[,1:30],las = 2, col=rainbow( ncol(WDBC.df_n)))
+```
+------------------------------------Identify missing values----------------------------
+I will use table to find if there is any NA. On the condition that there is any, we should impute WDBC.df to remove NAs. they should be replaced with median(more stable than mean). I defined the fill_NAcol Function to fill in NA for numeric/integer vector with median.I did not find any NA in my datset, so I left it unmanipulated.
+
+```{r }
+for(i in 1:length(WDBC.df_n)){
+  print(table(is.na(WDBC.df_n[,i]),useNA = 'always')) 
+  }
+WDBC_NAcol<- colnames(WDBC.df_n)[colSums(is.na(WDBC.df_n))>0]
+WDBC_NAcol 
+sum(is.na(WDBC.df_n))
+#WBCD.df[which(is.na(WDBC.df[,i])),i] <- median(WDBC.df[,i],na.rm=T)
+#View(WDBC.df)
+### Execute Function
+#for (i in 1: length(WDBC_NAcol)) {
+  #clm<- WDBC_NAcol[i]
+  #if (is.numeric(WDBC.df[,clm]) | is.integer(WDBC.df[,clm])) 
+    #WDBC.df[which(is.na(WDBC.df[clm])),clm] <- Fill_NAcol(WDBC.df[,clm])
+#}
+
+```
+------------------------------------Explore outliers--------------------------------
+Identify outliers in my script, WBCDOUT.This is a victor contains the values.
+2- Use this vector to identify the rows.Use which() function to identify the row numbers. 
+3- Set the value for them to NA.  
+4- Update the NA values with median, because after removing the outliers- median will be more representative of the data
+After replacing outliers with median of WDBC.df_n dataset, I can have  now evenly distributed
+dataset. I noticed that even after applying all these functions I still have outliers, so I did coding to identify each individual variable has outlier. By the way, I found that my classifiers are resistant to outliers. Ultimately, I am not going to remove them.
+
+```{r }
+colnm<-list()
+WDBCOUT<- list()
+#for(i in 1:ncol(WDBC.df_n)) {
+  #if (is.numeric(WDBC.df_n[,i])) {
+    #WDBCST <- boxplot.stats(WDBC.df_n[,i], coef = 1.5, do.conf = TRUE, do.out = TRUE)
+    #WDBCOUT <- WDBCST$out
+    #str(WDBCOUT)
+    #print(WDBCOUT)
+    #readline("Press Enter")
+     #print(paste(colnm[i]," ",WDBCOUT))
+     #readline("Press Enter to Continue")
+  #}
+#}
+
+#length(WDBCOUT) # check the number of outliers
+WDBC.df_n[which(WDBC.df_n[,i] %in% WDBCOUT), i]
+dfnames <- names(WDBC.df_n)
+for(i in 1:ncol(WDBC.df_n)) {
+  if (is.numeric(WDBC.df_n[,i])) {
+    WDBCST <- boxplot.stats(WDBC.df_n[,i], coef = 1.5, do.conf = TRUE, do.out = TRUE)
+    WDBCOUT <- WDBCST$out
+    print(paste(i, dfnames[i], which(WDBC.df_n[,i] %in% WDBCOUT)))#shows the indexes of the outlier
+     }
+}
+
+#WDBC.df_n[which(WDBC.df_n[,i] %in% WDBCOUT), i] <- NA 
+#double check that whether I assigned NA to the outliers.
+#sum(is.na(WDBC.df_n)) 
+#replace the outlrs with the median, because after removing the outliers- median will be more representative of the data
+#WDBC.df_n[which(is.na(WDBC.df_n[,i])),i] <- median(WDBC.df_n[,i],na.rm=T)
+#for(i in 1:ncol(WDBC.df_n)) {boxplot(WDBC.df_n[,i], col=rainbow( ncol(WDBC.df_n)))}
+#boxplot.stats(WDBC.df_n[,i], coef = 1.5, do.conf = TRUE, do.out = TRUE)
+#View(WDBC.df_n)
+#boxplot(WDBC.df_n,las = 2, col=rainbow( ncol(WDBC.df_n)))
+```
+---------------------------------getting significance---------------------------
+I will get significant features with lm function.The p-value exists in F-statistic. I am going to get the names of summary of lm_l of fstatistic and noticed the value is the first parameter in f-statistics.
+```{r }
+Binary_diagnosis<-ifelse(WDBC.df[,1]=='M', 1, 0)
+lm_1 <- lm(Binary_diagnosis~., data = WDBC.df_n)
+#plot(WDBC.df$radius_mean  ~ as.factor(Binary_diagnosis))
+#boxplot(WDBC.df$radius_mean  ~ as.factor(WDBC.df[,1]))
+summary(lm_1)
+names(summary(lm_1))
+summary(lm_1)$fstatistic 
+# The significance measure we want:
+summary(lm_1)$fstatistic[1] 
+```
+I will Create the new vector of length of 30. (I have 10 features for each 3 measurments). I will assign the name of my normalized dataset to vars and then assign vars into the new vector.
+
+```{r }
+vars <- names(WDBC.df_n)
+vars_fstat <- as.numeric(rep(NA, times = 30)) # Create the new vector of length of 30
+names(vars_fstat) <- vars
+```
+there isn't a named variable of the form vars[j]
+need the named variable stored in this "".
+I will use sapply/ lapply to avoid worrying about an iteration and do a batch job.
+I will use as.formula to extract formulae which have been included in other objects. paste works like as.character
+```{r }
+vars_fstat2 <- sapply(vars, function(x) {
+  summary(lm(as.formula(paste(x, " ~ Binary_diagnosis")), data=WDBC.df_n))$fstatistic[1]
+})
+names(vars_fstat2) <- vars
+
+```
+It's cumbersome to have these 30 variables as separate columns.I will homogenize the data by forming a list of data.frames with one component for each variable as follows.
+```{r }
+WDBC.df_h <- lapply(vars, function(x) {
+df <- data.frame( variable = x, value = WDBC.df_n[, x], class = Binary_diagnosis)
+})
+head(WDBC.df_h[1]) # data frame of stacked columns
+head(WDBC.df_h[[1]])
+#View(WDBC.df_h)
+```
+I assigned vars to names of my homogenized dataset and do the same for my model to track the names of variables with the values so that recognize which variable has what amount of significancy. I used library plyr version of fit to avoid over fitting or under fitting. (spliting, applying, combining data)
+```{r }
+library(plyr)
+var_sig_fstats <- laply(WDBC.df_h, function(y) {
+  fit <- lm(value ~ class, data = y)
+  f <- summary(fit)$fstatistic[]
+})
+names(var_sig_fstats) <- names(vars_fstat2)
+var_sig_fstats[1:7]
+
+```
+---------------------------Exploring the most significance variable--------------------
+I am going to sort the variables of my new dataset according to the importance of my variables. The most significant variable of this dataset is concave.points_worst. I will create the new vector of my ordered variables
+```{r }
+most_sig_fstats <- sort(var_sig_fstats, decreasing = T)
+most_sig_fstats[1:5]
+```
+------------------------Feature Selection (remove redundant features)-------------------
+I am going to limit the quantity of input attributes to reach better predictive and less incentive models. I used two feature selection methods, RFE and Chisquare. Because RFE takes a very long time (over 8 hrs) to run on significant number of folders, I am going to try that on 10 folders. I am aware that in order to improve the function I should use more. On the contrary, Chisquare was very fast and give the same sets of features. regsubsets gives me different sets of features. Also,features are selected intuitively according to their significant level.
+```{r }
+#View(WDBC.df_n)
+WDBC.df_n <- cbind(diagnosis=WDBC.df[,1],WDBC.df_n)
+##RFE
+library(caret)
+control_var<- rfeControl(functions=rfFuncs, method = "cv", number = 4)
+rfe<- rfe(WDBC.df_n[,2:31],WDBC.df_n$diagnosis, sizes= 1:31, rfeControl = control_var,ba.rm=T)
+print(rfe)
+predictors(rfe)
+plot(rfe, type = c("g","o"))
+##Chi-square
+library(rJava)
+library(mlbench)# For data
+library(FSelector)#For method
+library(randomForest)
+#Calculate the chi square statistics 
+weights<- chi.squared(diagnosis~., WDBC.df_n)
+#Print the results 
+print(weights)
+#Select top five variables
+subset<- cutoff.k(weights, 5)
+#Print the final formula that can be used in classification
+f<- as.simple.formula(subset, "Class")
+print(f)
+#regsubsets
+library(leaps)
+subsets<-regsubsets(diagnosis~., data=WDBC.df_n, nbest=1)
+sub.sum<-summary(subsets)
+as.data.frame(sub.sum$outmat)
+```
+-----------------------------------RFE/Chi-square/my own method------------------------
+RFE returns 5 top variables out of 13 for WDBC.df_n. I got 5 features from those Chisquare selected. regsubsets return improtant features with their following ranking: radius_worst  7*, texture_worst  6*, concave.points_worst  5*, area_worst 5*, symmetry_worst 3*, smoothness_se  3*
+concave.points_mean 3*, perimeter_mean  2*, fractal_dimension_worst 1*,compactness_mean    1*
+I am going to create a new data.frame with 7 of these variables.Additionaly, I am going to intuitively select features according to their significant level (which one has the most contribution to the result) , and compare the result of my chosen dataset with my RFE chosen one and the chisquare. I noticed that RFE and Chisquare select the same features and similar to my selected features except for perimeter_mean.As opposed to Chisquare, RFE is a very time consuming algorithm. Given this fact, I am going to consider the erformance of Chisquare. Also, I am aware that they give the same accuracy. I am going to consider the significancy, accuracy and efficiency of these feature selection algorithms and come up withe best one.
+```{r }
+#--------------------------------RFE----------------------------------# 
+#returned 5 variables as ideal predictors for WDBC.df_n 
+#create a new data.frame with these top variables
+#dput(names(WDBC.df_order ))
+#RFE_WDBC.df<-WDBC.df_order[c(" area_worst","perimeter_worst","concave.points_worst","radius_worst", "concave.points_mean")]
+#-------------------------------Chi-square---------------------------#
+#returned 5 ideal predictors
+#create the new data frame with these
+dput(names(WDBC.df_n ))
+Chisquare_WDBC.df <-WDBC.df_n[c("perimeter_worst","radius_worst","area_worst","concave.points_worst","concave.points_mean")]
+pairs(Chisquare_WDBC.df)
+#cor.test(Chisquare_WDBC.df$perimeter_worst,Chisquare_WDBC.df$radius_worst)
+#cor.test(Chisquare_WDBC.df$area_worst,Chisquare_WDBC.df$concave.points_worst)
+#--------------------------------------------regsubsets------------------------------------------#
+dput(names(WDBC.df_n ))
+regsubsets_WDBC.df<-WDBC.df_n[c("radius_worst","texture_worst","concave.points_worst","area_worst", "symmetry_worst","smoothness_se","concave.points_mean", "perimeter_mean", "fractal_dimension_worst", "compactness_mean")]
+pairs(regsubsets_WDBC.df)
+#cor.test(regsubsets_WDBC.df$concave.points_mean,regsubsets_WDBC.df$texture_worst)
+#cor.test(regsubsets_WDBC.df$concave.points_mean,regsubsets_WDBC.df$perimeter_mean)
+#cor.test(regsubsets_WDBC.df$fractal_dimension_worst,regsubsets_WDBC.df$compactness_mean)
+#ncol(regsubsets_WDBC.df)
+
+#-------------------------------------Intuitively selecting features------------------------------------#
+dput(names(WDBC.df_n ))
+Int_fs_WDBC.df<-WDBC.df_n[c("concave.points_worst","perimeter_worst","concave.points_mean","radius_worst","perimeter_mean")]
+pairs(Int_fs_WDBC.df)
+#cor.test(Int_fs_WDBC.df$radius_worst,Int_fs_WDBC.df$perimeter_mean)
+#cor.test(Int_fs_WDBC.df$concave.points_mean,Int_fs_WDBC.df$perimeter_worst)
+
+```
+-----------------------------------------------Modelling---------------------------------------------
+I am going to use 10-fold cross validation(repeated it 10 times) on KNN, SVM, Random Forest, Decision tree classifiers to train my RFE, my Regsubsets and my manipulated dataset. Also, I will use confusion matrix to predict the accuracy. I am aware that if I increase the repeatition, the function of my classifiers will improve.
+The first row and first column section of the table tells us the number of cases which have been accurately predicted (TN->True Negatives) as Benign (B).
+The second row and second column section of the table tells us the number of cases which have been accurately predicted (TP-> True Positives) as Malignant (M).
+The second row and first column section of the table tells us the number of cases which  actually are malignant in nature but got predicted as benign.(FN-> False Negatives)
+The first row and second column section of the table tells us the number cases of False Positives (FP) meaning the cases were actually Benign in nature but got predicted as Malignant.  
+The total accuracy of the model is calculated by (TN+TP)/57.
+```{r }
+library(gridBase)
+require(grid)
+library(class)
+library(gmodels)
+library(mlbench)
+library(caret)
+library(e1071)
+library(rpart)
+library(kernlab)
+```
+-------------------------------------Chisquare dataset-------------------------------------------------
+I am going to use KNN, SVM and randomForest on RFE dataset. 70% of the dataset is devoted to training and 30% to testing. I use 10-fold cross validation with 10 repeats, so obtain 100 sets of metrics which are used to calculate the standard deviation and mean of each metric. And also I use confusion matrix to see the result for accuracy, sensitivity,specificity. I will save the confusion matrix output and accuracy in separate vectors.
+```{r }
+#View(Chisquare_WDBC.df)
+Chisquare_WDBC.df <- cbind(diagnosis=WDBC.df[,1],Chisquare_WDBC.df)
+#Chisquare_WDBC.df <- Chisquare_WDBC.df[sample(nrow(Chisquare_WDBC.df)),]
+Chi_train <- sample(nrow(Chisquare_WDBC.df), floor(nrow(Chisquare_WDBC.df)*0.7))
+Chisquare_train<-Chisquare_WDBC.df[Chi_train,]
+Chisquare_test<-Chisquare_WDBC.df[-Chi_train,]
+#View(WDBC.df)
+control <- trainControl(method="repeatedcv", number=10, repeats=10)
+seed <- 7
+preProcess=c("center", "scale")
+set.seed(seed)
+##knn
+library(caret)
+fit.knn_chi <- train(diagnosis~., data=Chisquare_train, method="knn", metric="Accuracy", preProc=c("center", "scale"), trControl=control)
+##SVMRadial
+library(e1071)
+fit.svmRadial_chi <- train(diagnosis~., data=Chisquare_train, method="svmRadial",
+metric="Accuracy", preProc=c("center", "scale"), trControl=control, fit=FALSE)
+##random forest
+fit.rf_chi <- train(diagnosis~., data=Chisquare_train, method="rf",
+metric="Accuracy", preProc=c("center", "scale"), trControl=control, fit=FALSE)
+results <- resamples(list(svm=fit.svmRadial_chi, knn=fit.knn_chi, randomForest=fit.rf_chi))
+summary(results)
+print(fit.knn_chi)
+print(fit.svmRadial_chi)
+print(fit.rf_chi)
+#KNN
+predictions_KNN <- predict(fit.knn_chi,Chisquare_test)
+knn_conf_chi<-confusionMatrix(predictions_KNN, Chisquare_test$diagnosis)
+knn_acc_chi <- knn_conf_chi$overall['Accuracy']
+#SVM
+predictions_SVM <- predict(fit.svmRadial_chi, Chisquare_test)
+svm_conf_chi<-confusionMatrix(predictions_SVM, Chisquare_test$diagnosis)
+svm_acc_chi <- svm_conf_chi$overall['Accuracy']
+#randomForest
+predictions_Rf <- predict(fit.rf_chi,Chisquare_test)
+rf_conf_chi<-confusionMatrix(predictions_Rf,Chisquare_test$diagnosis)
+rf_acc_chi <- rf_conf_chi$overall['Accuracy']
+bwplot(results)
+dotplot(results)
+
+```
+I am going to estimate the performance of decision tree by confusion matrix. I try both rpart and caret packages and find the latter one gives me a bit higher accuracy. However, I am aware that package does not contribute so much to the performance of my classifier.
+```{r }
+##Decision Tree
+library(tree)
+library(caret)
+fitControl <- trainControl(method="cv",number=10,classProbs=TRUE,summaryFunction=twoClassSummary)
+fit.tree_caret_chi <- train(diagnosis~., data = Chisquare_train, method='ctree', tuneLength=10,trControl=fitControl, metric='ROC' )
+print(fit.tree_caret_chi)
+predictions_DT<-predict(fit.tree_caret_chi,Chisquare_test )
+dt_conf_caret_chi<-confusionMatrix(predictions_DT, Chisquare_test$diagnosis)
+dt_acc_caret_chi <- dt_conf_caret_chi$overall['Accuracy']
+```
+Plotting the decision tree
+```{r }
+library(rpart.plot)
+library(caret)
+gender_tree <- rpart(diagnosis~., data=Chisquare_test) 
+prp(gender_tree,box.col = rainbow(length(Chisquare_test)))
+```
+
+```{r }
+#rpart
+#library(caret)
+# prepare resampling method
+#control <- trainControl(method="cv", number=10, classProbs=TRUE, summaryFunction=mnLogLoss)
+#set.seed(7)
+#fit_rpart_chi <- train(diagnosis~., data=Chisquare_train, method="rpart", metric="logLoss", trControl=control)
+# display results
+#print(fit)
+#predictions<-predict(fit_rpart_chi,Chisquare_test )
+#rpart_conf__chi<-confusionMatrix(predictions, Chisquare_test$diagnosis)
+#rpart_acc__chi <- rpart_conf__chi$overall['Accuracy']
+```
+plotting(comparing the performance of classifiers) for my dataset
+```{r }
+library(gridBase)
+require(grid)
+acc <- c(knn_acc_chi ,svm_acc_chi,rf_acc_chi,dt_acc_caret_chi)
+acc <-as.numeric(acc)
+acc
+methods <- c("KNN", "SVM","randomForest", "Decision Tree")
+barplot(acc, names.arg=methods, col=rainbow(length(methods)), ylim=c(0,1), main='Acc comparison',ylab = "Acc", xlab="classifier")
+```
+------------------------------------regsubsets dataset-----------------------------------------------
+```{r }
+regsubsets_WDBC.df <- cbind(diagnosis=WDBC.df[,1],regsubsets_WDBC.df)
+#regsubsets_WDBC.df <- regsubsets_WDBC.df[sample(nrow(regsubsets_WDBC.df)),]
+#View(regsubsets_WDBC.df)
+reg_train <- sample(nrow(regsubsets_WDBC.df), floor(nrow(regsubsets_WDBC.df)*0.7))
+regsubsets_train<-regsubsets_WDBC.df[reg_train,]
+regsubsets_test<-regsubsets_WDBC.df[-reg_train,]
+##knn
+library(caret)
+fit.knn_reg <- train(diagnosis~., data=regsubsets_train, method="knn", metric="Accuracy", preProc=c("center", "scale"), trControl=control)
+##SVMRadial
+library(e1071)
+fit.svmRadial_reg <- train(diagnosis~., data=regsubsets_train, method="svmRadial",
+metric="Accuracy", preProc=c("center", "scale"), trControl=control, fit=FALSE)
+##random forest
+fit.rf_reg <- train(diagnosis~., data=regsubsets_train, method="rf",
+metric="Accuracy", preProc=c("center", "scale"), trControl=control, fit=FALSE)
+results <- resamples(list(svm=fit.svmRadial_reg, knn=fit.knn_reg, randomForest=fit.rf_reg))
+summary(results)
+print(fit.knn_reg)
+print(fit.svmRadial_reg)
+print(fit.rf_reg)
+#KNN
+predictions_KNN_reg <- predict(fit.knn_reg, regsubsets_test)
+knn_conf_reg<-confusionMatrix(predictions_KNN_reg, regsubsets_test$diagnosis)
+knn_acc_reg <- knn_conf_reg$overall['Accuracy']
+#SVM
+predictions_SVM_reg <- predict(fit.svmRadial_reg, regsubsets_test)
+svm_conf_reg<-confusionMatrix(predictions_SVM_reg, regsubsets_test$diagnosis)
+svm_acc_reg <- svm_conf_reg$overall['Accuracy']
+#randomForest
+predictions_RF_reg <- predict(fit.rf_reg, regsubsets_test)
+rf_conf_reg<-confusionMatrix(predictions_RF_reg, regsubsets_test$diagnosis)
+rf_acc_reg <- rf_conf_reg$overall['Accuracy']
+bwplot(results)
+dotplot(results)
+```
+Decision tree classifier
+2 packages exist for this algorithm : rpart. plot and  caret. I am going to use caret.
+```{r }
+##Decision Tree
+library(tree)
+library(caret)
+fitControl <- trainControl(method="cv",number=10,classProbs=TRUE,summaryFunction=twoClassSummary)
+fit.tree_caret_reg <- train(diagnosis~., data = regsubsets_WDBC.df, method='ctree', tuneLength=10,trControl=fitControl, metric='ROC' )
+print(fit.tree_caret_reg)
+predictions_DT_reg<-predict(fit.tree_caret_reg,regsubsets_test)
+dt_conf_caret_reg<-confusionMatrix(predictions_DT_reg, regsubsets_test$diagnosis)
+dt_acc_caret_reg <- dt_conf_caret_reg$overall['Accuracy']
+
+```
+Plotting the decision tree for RFE selected features
+```{r }
+library(rpart.plot)
+library(caret)
+diagnosis_tree <- rpart(diagnosis~., data=regsubsets_test) 
+prp(diagnosis_tree,box.col = rainbow(length(regsubsets_test)))
+
+```
+plotting(comparing the performance of classifiers(KNN, SVM, RF, DT)) for my regsubsets
+```{r }
+library(gridBase)
+require(grid)
+acc <- c(knn_acc_reg ,svm_acc_reg,rf_acc_reg,dt_acc_caret_reg)
+cc <-as.numeric(acc)
+acc
+methods <- c("KNN", "SVM","randomForest", "Decision Tree")
+barplot(acc, names.arg=methods, col=rainbow(length(methods)), ylim=c(0,1), main='Acc comparison',ylab = "Acc", xlab="classifier")
+```
+----------------------------Intuitively feature selected dataset--------------------------------------
+I am going to use KNN, SVM and random forest on the data set that I myself select its features to compute their accuracy, specificity and sensitivity through confusion matrix
+```{r }
+Int_fs_WDBC.df <- cbind(diagnosis=WDBC.df[,1],Int_fs_WDBC.df)
+#Int_fs_WDBC.df <- Int_fs_WDBC.df[sample(nrow(Int_fs_WDBC.df)),]
+fs_train <- sample(nrow(Int_fs_WDBC.df), floor(nrow(Int_fs_WDBC.df)*0.7))
+Int_fs_train<-Int_fs_WDBC.df[fs_train,]
+Int_fs_test<-Int_fs_WDBC.df[-fs_train,]
+##knn
+library(caret)
+fit.knn_Intfs <- train(diagnosis~., data= Int_fs_train, method="knn", metric="Accuracy", preProc=c("center", "scale"), trControl=control)
+##SVMRadial
+library(e1071)
+fit.svmRadial_Intfs<- train(diagnosis~., data=Int_fs_train, method="svmRadial",
+metric="Accuracy", preProc=c("center", "scale"), trControl=control, fit=FALSE)
+##random forest
+fit.rf_Intfs <- train(diagnosis~., data=Int_fs_train, method="rf",
+metric="Accuracy", preProc=c("center", "scale"), trControl=control, fit=FALSE)
+results <- resamples(list(svm=fit.svmRadial_Intfs, knn=fit.knn_Intfs, randomForest=fit.rf_Intfs))
+summary(results)
+print(fit.knn_Intfs)
+print(fit.svmRadial_Intfs)
+print(fit.rf_Intfs)
+#KNN
+predictions_KNN_Intfs <- predict(fit.knn_Intfs, Int_fs_test)
+knn_conf_Intfs<-confusionMatrix(predictions_KNN_Intfs, Int_fs_test$diagnosis)
+knn_acc_Intfs <- knn_conf_Intfs$overall['Accuracy']
+#SVM
+predictions_SVM_Intfs <- predict(fit.svmRadial_Intfs, Int_fs_test)
+svm_conf_Intfs<-confusionMatrix(predictions_SVM_Intfs, Int_fs_test$diagnosis)
+svm_acc_Intfs <- svm_conf_Intfs$overall['Accuracy']
+#randomForest
+predictions_RF_Intfs <- predict(fit.rf_Intfs, Int_fs_test)
+rf_conf_Intfs<-confusionMatrix(predictions_RF_Intfs, Int_fs_test$diagnosis)
+rf_acc_Intfs<- rf_conf_Intfs$overall['Accuracy']
+bwplot(results)
+dotplot(results)
+
+```
+decision tree classifier:
+```{r }
+##Decision Tree
+library(tree)
+library(caret)
+fitControl <- trainControl(method="cv",number=10,classProbs=TRUE,summaryFunction=twoClassSummary)
+fit.tree_caret_Intfs <- train(diagnosis~., data = Int_fs_train, method='ctree', tuneLength=10,trControl=fitControl, metric='ROC' )
+print(fit.tree_caret_Intfs)
+predictions_DT_Intfs<-predict(fit.tree_caret_Intfs,Int_fs_test)
+dt_conf_caret_Intfs<-confusionMatrix(predictions_DT_Intfs, Int_fs_test$diagnosis)
+dt_acc_caret_Intfs <- dt_conf_caret_Intfs$overall['Accuracy']
+```
+Plotting decision tree
+```{r }
+library(caret)
+library(rpart.plot)
+diagnosis_tree <- rpart(diagnosis~., data=Int_fs_test) 
+prp(diagnosis_tree,box.col = rainbow(length(Int_fs_test)))
+```
+plotting(comparing the performance of classifiers (KNN, SVM,RF,DT)) for my regsubsets
+```{r }
+acc <- c(knn_acc_Intfs ,svm_acc_Intfs,rf_acc_Intfs,dt_acc_caret_Intfs)
+acc <-as.numeric(acc)
+acc
+methods <- c("KNN", "SVM","randomForest", "Decision Tree")
+barplot(acc, names.arg=methods, col=rainbow(length(methods)), ylim=c(0,1), main='Acc comparison',ylab = "Acc", xlab="classifier")
+
+```
+According to the evaluation of the performances of the four models measured by three statistical measurements;accuracy, sensitivity, and specificity,the most efficient method for predicting Benign and Malignant is RF with Chi-square feature selection (96.91%). My sample dataset is small as only about 200 samples is tested to predict Menign and Malignant.
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
