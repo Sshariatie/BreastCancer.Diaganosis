@@ -13,7 +13,7 @@ my dataset has imbalanced classes (B=357,M=212)
 #Getting the dataset path
 getwd() 
 #Getting the data
-WDBC.df <- read.csv(file= "C:/Users/Owner/Downloads/Breast Cancer_Diagnosis.csv",
+WDBC.df <- read.csv(file= "Breast_Cancer_Diagnosis.csv",
 header= TRUE, stringsAsFactors = F, na.strings = c("", "NA"), sep = ',')
 #str(WDBC.df)
 WDBC.df <- WDBC.df[-1]
