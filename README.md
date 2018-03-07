@@ -1,6 +1,4 @@
 
-
-
 # Breast Cancer Diagnosis Using Data Mining Techniques
 
 **Abstract–** This research represents an application of Data Mining i.e. knowledge discovery in database (KDD) to predict whether the patient is affected by non-cancerous (Benign) or cancerous (Malignant) lesions. The reliability of classification is challenging because of measurement noise and biological heterogeneity. The Wisconsin Diagnostic Breast Cancer disclosure dataset is used, based on Fine Needle Aspiration (FNA), from UCI machine learning repository site. There is a difficulty in distinguishing Benign from Malignant. The implementation of different supervised learning methods and comparison of their performance and error properties can be an approach to this binary classification problem. Four distinct classification algorithms and feature selection methods are applied in this research. Random Forest (RF) algorithm with Chi-square 
